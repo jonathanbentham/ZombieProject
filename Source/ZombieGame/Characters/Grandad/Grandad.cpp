@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "ZombieGame/Characters/Grandad/Grandad.h"
 #include "ZombieGame/GameMode/ZombieGameMode.h"
 #include "ZombieGame/Characters/PlayerCharacter/ZombieGameCharacter.h"
@@ -94,20 +92,18 @@ void AGrandad::SetupPlayerInputComponent(UInputComponent *PlayerInputComponent)
 
 void AGrandad::HandleDamage(float const DamageAmount, struct FDamageEvent const &DamageEvent, class AController *EventInstigator, AActor *DamageCauser)
 {
-	float DamageToApply = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser); // takes the damage values from the zombie in BTTask_Attack and plugs them into the base implementation of TakeDamage
+	// Run the base TakeDamage so damage events still fire, then apply the result to Grandad's health
+	const float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Health -= FMath::Min(Health, FMath::RoundToInt(DamageTaken));
+	UE_LOG(LogTemp, Log, TEXT("Grandad health left: %d"), Health);
+
+	// Check after applying damage, so the killing hit ends the game
 	if (Health <= 0)
 	{
-		// when health is below 0
-		UE_LOG(LogTemp, Log, TEXT("Health left %f"), Health);
-		ACharacter *PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-		AZombieGameCharacter *Character = Cast<AZombieGameCharacter>(PlayerCharacter);
-		Character->HandleCharacterDeath();
-	}
-	else // player is alive
-	{
-		DamageToApply = FMath::Min(Health, DamageToApply);
-		Health -= DamageToApply; // deducts damage from health
-		UE_LOG(LogTemp, Log, TEXT("Health left %f"), Health);
+		if (AZombieGameCharacter *Character = Cast<AZombieGameCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)))
+		{
+			Character->HandleCharacterDeath();
+		}
 	}
 }
 

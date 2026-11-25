@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -43,6 +41,7 @@ public:
 	UPROPERTY(EditAnywhere)
 	class UBehaviorTree* BehaviorTree;
 
+	UPROPERTY()
 	TArray<AZombie*> SpawnedZombies;
 
 
@@ -74,6 +73,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int MaxWaves = 100;
 
+	// Corners of the world-space box that zombies spawn in
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	FVector SpawnAreaMin = FVector(-40870.0, 392000.0, -379670.0);
+
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	FVector SpawnAreaMax = FVector(-63790.0, 409560.0, -378590.0);
+
+	// How many random points to try per zombie before giving up
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	int32 MaxSpawnAttempts = 50;
+
+	// How far above and below each point to sweep for the ground
+	UPROPERTY(EditAnywhere, Category = "Spawning")
+	float SpawnTraceHalfHeight = 6500.f;
+
 	// functionality in blueprint
 	UFUNCTION(BlueprintImplementableEvent)
 	void SpawnAmmo();
@@ -82,6 +96,7 @@ private:
 	// functions
 	void StartGame();
 	void SpawnZombies();
+	bool FindSpawnLocation(const FBox& SpawnArea, FVector& OutLocation) const;
 	void HandleWaveStart();
 	void WaveIncrement();
 	void PlayerWins();

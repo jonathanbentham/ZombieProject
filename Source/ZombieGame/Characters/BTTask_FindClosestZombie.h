@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -22,12 +20,14 @@ protected:
 
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent &OwnerComp, uint8 *NodeMemory) override;
 
-	UBehaviorTreeComponent *CachedOwnerComp; // Member variable to store OwnerComp
+	UPROPERTY()
+	UBehaviorTreeComponent *CachedOwnerComp = nullptr; // Stored for the async query callback
 
 	UPROPERTY(EditAnywhere, Category = "AI")
 	UEnvQuery *FindZombieEQS;
 
 	void ZombieQueryResult(TSharedPtr<FEnvQueryResult> Result);
 	
-	AAIController* AIController;
+	UPROPERTY()
+	AAIController* AIController = nullptr;
 };

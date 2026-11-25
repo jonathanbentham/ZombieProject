@@ -1,10 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "ZombieGameMode.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "ZombieGame/Characters/PlayerCharacter/ZombieGameCharacter.h"
-#include "EngineUtils.h" // Include the appropriate header for TActorIterator
+#include "Components/StaticMeshComponent.h"
 
 void AZombieGameMode::BeginPlay()
 {
@@ -20,67 +18,77 @@ void AZombieGameMode::StartGame()
 
 void AZombieGameMode::SpawnZombies()
 {
-    // these are all values to make up a box in the level for the zombies to spawn
-    FVector const MinBounds = FVector(-40870.0, 392000.0, -379670.0);
-    FVector const MaxBounds = FVector(-63790.000000, 409560.0, -378590.0);
-
     ZombiePawnClasses = {ZombiePawn1, ZombiePawn2, ZombiePawn3, ZombiePawn4};
 
-    if (CurrentWave % 5 == 0)
-    {
-        ZombieTotal = CurrentWave / 5;
-    }
-    else
-    {
-        ZombieTotal = CurrentWave * 4;
-    }
+    // Every fifth wave is a boss wave: fewer zombies, but they are all fire bosses
+    const bool bIsBossWave = CurrentWave % 5 == 0;
+    ZombieTotal = bIsBossWave ? CurrentWave / 5 : CurrentWave * 4;
 
-    ZombiesLeft = ZombieTotal;
+    const FBox SpawnArea(SpawnAreaMin, SpawnAreaMax);
+    int32 ZombiesSpawned = 0;
 
-    for (int i = 0; i < ZombieTotal; i++)
+    for (int32 i = 0; i < ZombieTotal; i++)
     {
         FVector SpawnLocation;
-        bool bValidSpawnLocation = false;
-
-        while (!bValidSpawnLocation)
+        if (!FindSpawnLocation(SpawnArea, SpawnLocation))
         {
-            SpawnLocation = FMath::RandPointInBox(FBox(MinBounds, MaxBounds));
-            FVector SweepStart = SpawnLocation + FVector(0.0f, 0.0f, 6500.0f);
-            FVector SweepEnd = SpawnLocation - FVector(0.0f, 0.0f, 6500.0f);
-            FHitResult SweepResult;
-            FCollisionQueryParams QueryParams;
-            QueryParams.AddIgnoredActor(this);
-
-            if (GetWorld()->SweepSingleByChannel(SweepResult, SweepStart, SweepEnd, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(75.0f), QueryParams))
-            {
-                if (SweepResult.GetComponent() && SweepResult.GetComponent()->IsA<UStaticMeshComponent>())
-                {
-                    // don't spawn
-                }
-                else
-                {
-                    bValidSpawnLocation = true;
-                    FVector GroundLocation = SweepResult.Location;
-                    SpawnLocation.Z = GroundLocation.Z;
-                }
-            }
+            UE_LOG(LogTemp, Warning, TEXT("SpawnZombies: no valid spawn location after %d attempts"), MaxSpawnAttempts);
+            continue;
         }
 
-        TSubclassOf<APawn> SpawnPawnClass;
-        if (CurrentWave % 5 == 0)
+        const TSubclassOf<APawn> SpawnPawnClass = bIsBossWave
+            ? FireZombiePawn
+            : ZombiePawnClasses[FMath::RandRange(0, ZombiePawnClasses.Num() - 1)];
+
+        APawn *SpawnedPawn = UAIBlueprintHelperLibrary::SpawnAIFromClass(GetWorld(), SpawnPawnClass, BehaviorTree, SpawnLocation);
+        if (!SpawnedPawn)
         {
-            SpawnPawnClass = FireZombiePawn;
+            continue;
         }
-        else
+
+        ZombiesSpawned++;
+        if (AZombie *SpawnedZombie = Cast<AZombie>(SpawnedPawn))
         {
-            SpawnPawnClass = ZombiePawnClasses[FMath::RandRange(0, ZombiePawnClasses.Num() - 1)];
+            SpawnedZombies.Add(SpawnedZombie);
         }
-        
-        AZombie* SpawnedZombie = Cast<AZombie>(SpawnPawnClass);
-        
-        SpawnedZombies.Add(SpawnedZombie);
-        UAIBlueprintHelperLibrary::SpawnAIFromClass(GetWorld(), SpawnPawnClass, BehaviorTree, SpawnLocation);
     }
+
+    // Only count zombies that actually spawned, otherwise the wave could never end
+    ZombiesLeft = ZombiesSpawned;
+    if (ZombiesLeft == 0)
+    {
+        WaveIncrement();
+    }
+}
+
+bool AZombieGameMode::FindSpawnLocation(const FBox &SpawnArea, FVector &OutLocation) const
+{
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);
+
+    for (int32 Attempt = 0; Attempt < MaxSpawnAttempts; Attempt++)
+    {
+        const FVector Candidate = FMath::RandPointInBox(SpawnArea);
+        const FVector SweepStart = Candidate + FVector(0.f, 0.f, SpawnTraceHalfHeight);
+        const FVector SweepEnd = Candidate - FVector(0.f, 0.f, SpawnTraceHalfHeight);
+
+        // A sphere sweep covers more ground than a line trace, which often missed and spawned zombies under the map
+        FHitResult Hit;
+        if (!GetWorld()->SweepSingleByChannel(Hit, SweepStart, SweepEnd, FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(75.f), QueryParams))
+        {
+            continue;
+        }
+
+        // Skip static meshes (houses, props) so zombies only spawn on open ground
+        if (Hit.GetComponent() && Hit.GetComponent()->IsA<UStaticMeshComponent>())
+        {
+            continue;
+        }
+
+        OutLocation = FVector(Candidate.X, Candidate.Y, Hit.Location.Z);
+        return true;
+    }
+    return false;
 }
 
 void AZombieGameMode::HandleZombieCountAndRound()
@@ -101,17 +109,6 @@ void AZombieGameMode::WaveIncrement()
     }
     else
     {
-        // // Once all zombies are killed in the round, a 5-second timer will start.
-        // FTimerHandle ZombieDestructionTimerHandle;
-        // GetWorld()->GetTimerManager().SetTimer(
-        //     ZombieDestructionTimerHandle, [this]()
-        //     {
-        //         for (TActorIterator<AZombie> ZombieItr(GetWorld()); ZombieItr; ++ZombieItr)
-        //         {
-        //             AZombie* Zombie = *ZombieItr;
-        //             Zombie->Destroy();
-        //         } },
-        //     5.0f, false);
 
         // Sets a timer of 10 seconds for both HandleWaveStart
         FTimerHandle RoundStartTimerHandle;
