@@ -12,10 +12,10 @@ If you only have a few minutes, these are the parts worth reading:
 
 | System | Where | What it shows |
 |---|---|---|
-| **Dismemberment** | [`Zombie.cpp` – `HandleBodyPartOverlap`](Source/ZombieGame/Characters/Zombie/Zombie.cpp#L172) | Per-limb health, hiding bones and spawning Niagara effects instead of using expensive mesh slicing. Losing a leg switches the zombie into a crawling state. |
-| **Zombie AI** | [`ZombieAIController.cpp` – `EnemyDetected`](Source/ZombieGame/Characters/Zombie/AI/ZombieAIController.cpp#L43) | Event-driven targeting through AI Perception and the blackboard. Zombies chase the player while they can see them, check the last known location, then go back to the front door or Grandad. |
+| **Dismemberment** | [`Zombie.cpp` – `OnBodyPartBeginOverlap`](Source/ZombieGame/Characters/Zombie/Zombie.cpp#L96) | One overlap handler for every hit box, with per-limb health. Limbs are removed by hiding bones and spawning Niagara effects instead of expensive mesh slicing. A zombie can only lose one arm, and losing its legs makes it crawl. |
+| **Zombie AI** | [`ZombieAIController.cpp` – `EnemyDetected`](Source/ZombieGame/Characters/Zombie/AI/ZombieAIController.cpp#L67) | Event-driven targeting through AI Perception and the blackboard. Zombies chase the player while they can see them, check the last known location, then go back to the front door or Grandad. |
 | **Async EQS task** | [`BTTask_FindClosestZombie.cpp`](Source/ZombieGame/Characters/BTTask_FindClosestZombie.cpp#L16) | A latent behaviour tree task, shared by the dog and turret, that runs an EQS query and finishes when the result comes back. It is instanced per AI and always finishes, even when the query fails. |
-| **Player state machine** | [`PlayerCharacter/States/`](Source/ZombieGame/Characters/PlayerCharacter/States) | The state pattern for Idle, Aiming, Fire, Reloading and Swapping, keeping each state's rules out of the character class. |
+| **Player state machine** | [`PlayerCharacter/States/`](Source/ZombieGame/Characters/PlayerCharacter/States) | The state pattern for Idle, Aiming, Fire, Reloading and Swapping, keeping each state's rules out of the character class. The character keeps one instance of each state and reuses it. |
 | **Wave spawning** | [`ZombieGameMode.cpp` – `SpawnZombies`](Source/ZombieGame/GameMode/ZombieGameMode.cpp#L19) | Wave scaling with boss waves every fifth round, and sphere-swept ground placement with a bounded number of attempts, configurable from the editor. |
 
 ## Systems

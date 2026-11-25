@@ -54,7 +54,7 @@ void AZombieGameCharacter::BeginPlay()
 	MainWidgetInstance = CreateWidget<UMainWidget>(GetWorld(), WidgetClass);
 	MainWidgetInstance->AddToViewport();
 
-	TryStateInstance = NewObject<UIdleState>(this);
+	TryStateInstance = GetState<UIdleState>();
 	TryStateInstance->TryEnterState(this);
 }
 
@@ -148,37 +148,37 @@ void AZombieGameCharacter::LookUpAtRate(float Rate)
 
 void AZombieGameCharacter::ZoomIn()
 {
-	TryStateInstance = NewObject<UAimingState>(this);
+	TryStateInstance = GetState<UAimingState>();
 	TryStateInstance->TryEnterState(this);
 }
 
 void AZombieGameCharacter::ZoomOut()
 {
-	TryStateInstance = NewObject<UAimingState>(this);
+	TryStateInstance = GetState<UAimingState>();
 	TryStateInstance->TryExitState(this);
 }
 
 void AZombieGameCharacter::StartFiring() // rename
 {
-	TryStateInstance = NewObject<UFireState>(this);
+	TryStateInstance = GetState<UFireState>();
 	TryStateInstance->TryEnterState(this);
 }
 
 void AZombieGameCharacter::StopFiring()
 {
-	TryStateInstance = NewObject<UFireState>(this);
+	TryStateInstance = GetState<UFireState>();
 	TryStateInstance->TryExitState(this);
 }
 
 void AZombieGameCharacter::StartReload()
 {
-	TryStateInstance = NewObject<UReloadingState>(this);
+	TryStateInstance = GetState<UReloadingState>();
 	TryStateInstance->TryEnterState(this);
 }
 
 void AZombieGameCharacter::SwitchToNextPrimaryWeapon()
 {
-	TryStateInstance = NewObject<USwappingWeaponState>(this);
+	TryStateInstance = GetState<USwappingWeaponState>();
 	TryStateInstance->TryEnterState(this);
 }
 

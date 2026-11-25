@@ -1,4 +1,3 @@
-// novmeber
 #pragma once
 
 #include "CoreMinimal.h"
@@ -31,6 +30,9 @@ protected:
 	UFUNCTION()
 	void InitializeGrandadBlackboardValue();
 
+	// What a zombie goes for when it can't see the player: a closed front door, otherwise Grandad
+	AActor* GetDefaultTarget() const;
+
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Blackboard)
 	AActor* Target;
@@ -38,7 +40,8 @@ public:
 	UFUNCTION()
 	void HandleDoorSpawned();
 
+	// Called when the player opens or closes the front door
 	UFUNCTION()
-	void HandleDoorOpen();
+	void HandleDoorToggled();
 	
 };

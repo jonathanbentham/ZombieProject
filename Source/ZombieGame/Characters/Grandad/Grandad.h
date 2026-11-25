@@ -17,6 +17,7 @@ class ZOMBIEGAME_API AGrandad : public ACharacter, public IDamageableInterface
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	int Health = 100;
 

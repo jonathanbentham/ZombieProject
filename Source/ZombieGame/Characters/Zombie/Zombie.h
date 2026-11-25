@@ -90,36 +90,20 @@ protected:
 	UPROPERTY(EditAnywhere, Category = Health)
 	float LegHealth = 50;
 
-	UPROPERTY(VisibleAnywhere, Category = Health)
-	float NoOppositeLimb = -1; // placeholder for when component such as head doesn't have an opposite limb
-
 	UPROPERTY(EditAnywhere, Category = VFX)
 	UNiagaraSystem* ZombieImpactVFX;
 
 private:
-	// Declare a common function to handle body part overlap
-	void HandleBodyPartOverlap(float Damage, float &LimbHealth, const FName &BoneToRemoveOne, const FName &BoneToRemoveTwo, AActor *OtherActor, UPrimitiveComponent *OverlappedComponent, float &OppositeLimbHealth);
+	// Applies a projectile hit to one body part. Returns true once that part's health has run out.
+	bool ApplyBodyPartHit(float Damage, float &BodyPartHealth, int32 Points);
 
-	// On begin overlap functions, DO NOT DELETE UFUNCTION IT'S ESSENTIAL
-	UFUNCTION()
-	void OnHeadBoxBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
-							   int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
-	UFUNCTION()
-	void OnRightArmBoxBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
-								   int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
-	UFUNCTION()
-	void OnLeftArmBoxBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
-								  int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
-	UFUNCTION()
-	void OnRightLegBoxBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
-								   int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
+	// Hides a limb's bone, plays the blood effect and removes the limb's hit box
+	void RemoveLimb(FName Bone, UPrimitiveComponent *LimbCollision);
 
+	// Every body-part hit box is bound to this one handler
 	UFUNCTION()
-	void OnTorsoBoxBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
+	void OnBodyPartBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
 								int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
-	UFUNCTION()
-	void OnLeftLegBoxBeginOverlap(UPrimitiveComponent *OverlappedComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp,
-								  int32 OtherBodyIndex, bool bFromSweep, const FHitResult &SweepResult);
 
 	UFUNCTION()
 	void OnMeshHit(

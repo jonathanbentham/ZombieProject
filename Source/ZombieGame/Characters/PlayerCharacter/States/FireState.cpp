@@ -18,10 +18,9 @@ void UFireState::TryEnterState(AZombieGameCharacter* Character)
 	if (Character->CurrentStateInstance->IsA<UIdleState>())
 	{
 		// This is for the ABP to go from idle to fire
-		Character->CurrentStateInstance = NewObject<UIdleFireState>(this);
+		Character->CurrentStateInstance = Character->GetState<UIdleFireState>();
 	}
-	// don't want to enter IdleFireState->EnterState, want to have FireState->EnterState as it's for both
-	// Character->CurrentStateInstance->EnterState(Character);
+	// Always run FireState::EnterState, even when the current state is now IdleFireState
 	
 	EnterState(Character);
 }
@@ -78,7 +77,7 @@ void UFireState::TryExitState(AZombieGameCharacter* Character)
 	if (Character->CurrentStateInstance->IsA<UReloadingState>() || Character->CurrentStateInstance->IsA<USwappingWeaponState>()) return;
 	if (Character->CurrentStateInstance->IsA<UIdleFireState>())
 	{
-		Character->CurrentStateInstance = NewObject<UIdleState>(Character);
+		Character->CurrentStateInstance = Character->GetState<UIdleState>();
 		Character->CurrentStateInstance->EnterState(Character);
 	}
 	

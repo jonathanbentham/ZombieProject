@@ -24,14 +24,14 @@ void UAimingState::EnterState(AZombieGameCharacter* Character)
 void UAimingState::TryEnterState(AZombieGameCharacter* Character)
 {
 	if (Character->CurrentStateInstance->IsA<UReloadingState>()) return;
-	Character->CurrentStateInstance = NewObject<UAimingState>(Character);
+	Character->CurrentStateInstance = Character->GetState<UAimingState>();
 	EnterState(Character);
 }
 
 void UAimingState::TryExitState(AZombieGameCharacter* Character)
 {
 	if (!(Character->CurrentStateInstance->IsA<UAimingState>())) return;
-	Character->CurrentStateInstance = NewObject<UIdleState>(Character);
+	Character->CurrentStateInstance = Character->GetState<UIdleState>();
 	Character->CurrentStateInstance->EnterState(Character);
 }
 

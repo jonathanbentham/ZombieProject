@@ -71,44 +71,35 @@ void AFrontDoor::OnItemEndOverlap(UPrimitiveComponent* OverlappedComponent, AAct
 
 void AFrontDoor::UseFrontDoor()
 {
-	AZombieGameMode* GameMode = Cast<AZombieGameMode>(UGameplayStatics::GetGameMode(this));
-	GameMode->OnDoorOpen.Broadcast();
-	UE_LOG(LogTemp, Warning, TEXT("You have interacted with buy door"));
-	ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-	AZombieGameCharacter* Character = Cast<AZombieGameCharacter>(PlayerCharacter);
-	if (!bDoorOpen) // set the points to be 2000
+	// Swing the door 90 degrees open or closed
+	FRotator NewRotation = DoorMesh->GetRelativeRotation();
+	NewRotation.Yaw += bDoorOpen ? -90.0f : 90.0f;
+	DoorMesh->SetRelativeRotation(NewRotation);
+	bDoorOpen = !bDoorOpen;
+
+	// Tell the zombies after the door has changed, so they read its new state
+	if (AZombieGameMode* GameMode = Cast<AZombieGameMode>(UGameplayStatics::GetGameMode(this)))
 	{
-		FRotator NewRotation = DoorMesh->GetRelativeRotation();
-		NewRotation.Yaw += 90.0f; // Rotate by 90 degrees around the Z-axis
-		DoorMesh->SetRelativeRotation(NewRotation);
-		bDoorOpen = true;
-	}
-	else
-	{
-		FRotator NewRotation = DoorMesh->GetRelativeRotation();
-		NewRotation.Yaw -= 90.0f; // Rotate by 90 degrees around the Z-axis
-		DoorMesh->SetRelativeRotation(NewRotation);
-		bDoorOpen = false;
+		GameMode->OnDoorOpen.Broadcast();
 	}
 }
 
 void AFrontDoor::HandleDamage(float const DamageAmount, struct FDamageEvent const& DamageEvent,
                               class AController* EventInstigator, AActor* DamageCauser)
 {
-	float DamageToApply = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-	// takes the damage values from the zombie in BTTask_Attack and plugs them into the base implementation of TakeDamage
-	if (Health <= 0)
+	// Apply the damage first, then check, so the hit that breaks the door destroys it
+	const float DamageTaken = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Health -= FMath::Min(Health, FMath::RoundToInt(DamageTaken));
+	if (Health > 0)
 	{
-		AZombieGameMode* GameMode = Cast<AZombieGameMode>(UGameplayStatics::GetGameMode(this));
-		// when health is below 0
-		bIsSpawned = false;
-		Destroy();
-		GameMode->OnDoorSpawn.Broadcast();
+		return;
 	}
-	else // player is alive
+
+	bIsSpawned = false;
+	Destroy();
+	if (AZombieGameMode* GameMode = Cast<AZombieGameMode>(UGameplayStatics::GetGameMode(this)))
 	{
-		DamageToApply = FMath::Min(Health, DamageToApply);
-		Health -= DamageToApply; // deducts damage from health
+		GameMode->OnDoorSpawn.Broadcast();
 	}
 }
 
@@ -126,6 +117,16 @@ AFrontDoor* AFrontDoor::GetInstance()
 	return FrontDoorInstance;
 }
 
+
+void AFrontDoor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// The instance pointer is static, so clear it when this door goes away (destroyed, or the play session ends)
+	if (FrontDoorInstance == this)
+	{
+		FrontDoorInstance = nullptr;
+	}
+	Super::EndPlay(EndPlayReason);
+}
 
 void AFrontDoor::SetInstance(AFrontDoor* NewInstance)
 {

@@ -72,6 +72,16 @@ void AGrandad::OnItemBeginOverlap(UPrimitiveComponent *OverlappedComponent, AAct
 	}
 }
 
+void AGrandad::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// The instance pointer is static, so clear it or the next play session would see a destroyed Grandad
+	if (GrandadInstance == this)
+	{
+		GrandadInstance = nullptr;
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
 // Static method to get the Singleton instance
 AGrandad *AGrandad::GetInstance()
 {

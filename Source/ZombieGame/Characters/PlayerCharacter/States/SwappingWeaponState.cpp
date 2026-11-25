@@ -5,7 +5,6 @@
 
 void USwappingWeaponState::EnterState(AZombieGameCharacter* Character)
 {
-	// Character->GetWorldTimerManager().ClearTimer(Character->ReloadTimerHandle);
 	// if the user switches weapon whilst reloading, the reload animation will not carry over to the next weapon.
 	bool Success = false;
 
@@ -35,7 +34,7 @@ void USwappingWeaponState::EnterState(AZombieGameCharacter* Character)
 		{
 		Character->CurrentWeaponIndex = 0;
 		UE_LOG(LogTemp, Display, TEXT("Current Weapon index: %d"), Character->CurrentWeaponIndex);
-		Character->CurrentStateInstance = NewObject<UIdleState>(Character);
+		Character->CurrentStateInstance = Character->GetState<UIdleState>();
 		Character->CurrentStateInstance->EnterState(Character);
 		Character->GunMesh->SetSkeletalMesh(Character->Weapons[Character->CurrentWeaponIndex]->WeaponMesh);
 		Character->GunMesh->AttachToComponent(Character->Mesh1P, FAttachmentTransformRules::SnapToTargetIncludingScale,
@@ -47,20 +46,18 @@ void USwappingWeaponState::EnterState(AZombieGameCharacter* Character)
 void USwappingWeaponState::TryEnterState(AZombieGameCharacter* Character)
 {
 	if (Character->CurrentStateInstance->IsA<UReloadingState>()) return;
-	Character->CurrentStateInstance = NewObject<USwappingWeaponState>(Character);
+	Character->CurrentStateInstance = Character->GetState<USwappingWeaponState>();
 	Character->CurrentStateInstance->EnterState(Character);
 }
 
 void USwappingWeaponState::TryExitState(AZombieGameCharacter* Character)
 {
-	Character->CurrentStateInstance = NewObject<UIdleState>(Character);
+	Character->CurrentStateInstance = Character->GetState<UIdleState>();
 	Character->CurrentStateInstance->EnterState(Character);
 }
 
 void USwappingWeaponState::WeaponSwapAfterDelay(AZombieGameCharacter* Character)
 {
 	Character->CurrentStateInstance->TryExitState(Character);
-	// Character->CurrentStateInstance = NewObject<UIdleState>(Character);
-	// Character->CurrentStateInstance->EnterState(Character);
 }
 

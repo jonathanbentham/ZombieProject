@@ -21,7 +21,7 @@ void UIdleState::EnterState(AZombieGameCharacter* Character)
 
 void UIdleState::TryEnterState(AZombieGameCharacter* Character)
 {
-	Character->CurrentStateInstance = NewObject<UIdleState>(Character);
+	Character->CurrentStateInstance = Character->GetState<UIdleState>();
 	Character->CurrentStateInstance->EnterState(Character);
 }
 

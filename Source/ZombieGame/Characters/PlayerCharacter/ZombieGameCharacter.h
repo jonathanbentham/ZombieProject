@@ -88,6 +88,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UCharacterStates* TryStateInstance;
 
+	// Returns this character's instance of a state, creating it the first time it's needed.
+	// States are reused, rather than a new object being created on every transition.
+	template <typename TState>
+	TState* GetState()
+	{
+		UCharacterStates*& State = StateCache.FindOrAdd(TState::StaticClass());
+		if (!State)
+		{
+			State = NewObject<TState>(this);
+		}
+		return CastChecked<TState>(State);
+	}
+
+	// One instance of each state, created on demand by GetState
+	UPROPERTY()
+	TMap<UClass*, UCharacterStates*> StateCache;
+
 	/** Pawn mesh: 1st person view (arms; seen only by self) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
 	USkeletalMeshComponent *GunMesh;

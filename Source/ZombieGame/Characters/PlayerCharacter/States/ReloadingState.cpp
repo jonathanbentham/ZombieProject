@@ -54,13 +54,13 @@ void UReloadingState::TryEnterState(AZombieGameCharacter* Character)
 		return;
 	}
 
-	Character->CurrentStateInstance = NewObject<UReloadingState>(Character);
+	Character->CurrentStateInstance = Character->GetState<UReloadingState>();
 	Character->CurrentStateInstance->EnterState(Character);
 }
 
 void UReloadingState::TryExitState(AZombieGameCharacter* Character)
 {
-	Character->CurrentStateInstance = NewObject<UIdleState>(Character);
+	Character->CurrentStateInstance = Character->GetState<UIdleState>();
 	Character->CurrentStateInstance->EnterState(Character);
 }
 
