@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "ReloadingState.h"
 #include "AimingState.h"
@@ -8,30 +6,56 @@
 #include "Components/Button.h"
 #include "ZombieGame/Characters/Grandad/Grandad.h"
 
+namespace
+{
+	// Name of the shop item that sells ammo for a weapon type
+	FString GetAmmoShopItemName(const EWeaponType WeaponType)
+	{
+		switch (WeaponType)
+		{
+		case EWeaponType::E_Pistol:
+			return TEXT("Pistol Ammo");
+		case EWeaponType::E_AssaultRifle:
+			return TEXT("Assault Rifle Ammo");
+		case EWeaponType::E_Shotgun:
+			return TEXT("Shotgun Ammo");
+		default:
+			return FString();
+		}
+	}
+}
+
 void UReloadingState::EnterState(AZombieGameCharacter* Character)
 {
-	const float MontageDuration = Character->Weapons[Character->CurrentWeaponIndex]->WeaponReloadMontage->
-		GetPlayLength();
-	const float WeaponReloadDelay = MontageDuration - 0.2; // Skip the last 0.2second
-	FTimerHandle ReloadTimerHandle;
-	Character->GunMesh->PlayAnimation(Character->Weapons[Character->CurrentWeaponIndex]->WeaponReloadMontage, false);
+	const ABaseWeapon* Weapon = Character->Weapons[Character->CurrentWeaponIndex];
+	Character->GunMesh->PlayAnimation(Weapon->WeaponReloadMontage, false);
 
-	// A delegate is created and is bound to the member function.
+	// Refill just before the reload animation ends, so the ammo count updates as the mag goes in
+	const float ReloadDelay = Weapon->WeaponReloadMontage->GetPlayLength() - 0.2f;
+	FTimerHandle ReloadTimerHandle;
 	const FTimerDelegate ReloadDelegate = FTimerDelegate::CreateUObject(this, &UReloadingState::RefillAmmo, Character);
-	Character->GetWorldTimerManager().SetTimer(ReloadTimerHandle, ReloadDelegate, WeaponReloadDelay, false);
+	Character->GetWorldTimerManager().SetTimer(ReloadTimerHandle, ReloadDelegate, ReloadDelay, false);
 }
 
 void UReloadingState::TryEnterState(AZombieGameCharacter* Character)
 {
-	if (Character->Weapons[Character->CurrentWeaponIndex]->TotalWeaponAmmo != 0 && Character->Weapons[Character->
-		CurrentWeaponIndex]->CurrentWeaponAmmo != Character->Weapons[
-		Character->CurrentWeaponIndex]->MaxWeaponClipSize)
+	const ABaseWeapon* Weapon = Character->Weapons[Character->CurrentWeaponIndex];
+	const bool bHasReserveAmmo = Weapon->TotalWeaponAmmo != 0;
+	const bool bClipIsFull = Weapon->CurrentWeaponAmmo == Weapon->MaxWeaponClipSize;
+	if (!bHasReserveAmmo || bClipIsFull)
 	{
-		if (Character->CurrentStateInstance->IsA<UReloadingState>() || Character->CurrentStateInstance->IsA<
-			UAimingState>() || Character->CurrentStateInstance->IsA<UIdleFireState>()) return;
-		Character->CurrentStateInstance = NewObject<UReloadingState>(Character);
-		Character->CurrentStateInstance->EnterState(Character);
+		return;
 	}
+
+	// Can't start a reload while already reloading, aiming or firing
+	const UCharacterStates* CurrentState = Character->CurrentStateInstance;
+	if (CurrentState->IsA<UReloadingState>() || CurrentState->IsA<UAimingState>() || CurrentState->IsA<UIdleFireState>())
+	{
+		return;
+	}
+
+	Character->CurrentStateInstance = NewObject<UReloadingState>(Character);
+	Character->CurrentStateInstance->EnterState(Character);
 }
 
 void UReloadingState::TryExitState(AZombieGameCharacter* Character)
@@ -40,77 +64,34 @@ void UReloadingState::TryExitState(AZombieGameCharacter* Character)
 	Character->CurrentStateInstance->EnterState(Character);
 }
 
-
 void UReloadingState::RefillAmmo(AZombieGameCharacter* Character)
 {
-	UE_LOG(LogTemp, Log, TEXT("Switching Mags!"));
-	if (Character->Weapons[Character->CurrentWeaponIndex]->CurrentWeaponAmmo == Character->Weapons[Character->
-		CurrentWeaponIndex]->MaxWeaponClipSize || Character->Weapons[
-		Character->CurrentWeaponIndex]->TotalWeaponAmmo <= 0)
+	ABaseWeapon* Weapon = Character->Weapons[Character->CurrentWeaponIndex];
+
+	// Move as much reserve ammo into the clip as it can hold
+	const int32 NeededAmmo = Weapon->MaxWeaponClipSize - Weapon->CurrentWeaponAmmo;
+	const int32 AmmoToLoad = FMath::Min(NeededAmmo, Weapon->TotalWeaponAmmo);
+	if (AmmoToLoad > 0)
 	{
-		// if the CurrentWeaponAmmo in the weapon is at the max clip size or is less than or the gun has no reserve ammo
+		Weapon->CurrentWeaponAmmo += AmmoToLoad;
+		Weapon->TotalWeaponAmmo -= AmmoToLoad;
 	}
-	else
-	{
-		// current ammo is the current ammo in the clip
-		// Needed ammo is the amount of ammo needed to make a full clip
-		const int NeededAmmo = Character->Weapons[Character->CurrentWeaponIndex]->MaxWeaponClipSize - Character->Weapons
-			[Character->CurrentWeaponIndex]->
-			CurrentWeaponAmmo;
-		if (Character->Weapons[Character->CurrentWeaponIndex]->TotalWeaponAmmo >= NeededAmmo)
-		{
-			Character->Weapons[Character->CurrentWeaponIndex]->CurrentWeaponAmmo = Character->Weapons[Character->
-					CurrentWeaponIndex]->CurrentWeaponAmmo +
-				NeededAmmo; // adds the ammo needed for a full clip
-			Character->Weapons[Character->CurrentWeaponIndex]->TotalWeaponAmmo = Character->Weapons[Character->
-				CurrentWeaponIndex]->TotalWeaponAmmo - NeededAmmo;
-			// deducts ammo added to clip
-		}
-		else if (Character->Weapons[Character->CurrentWeaponIndex]->TotalWeaponAmmo > 0)
-		// if the ammo amount is less than the needed ammo
-		{
-			Character->Weapons[Character->CurrentWeaponIndex]->CurrentWeaponAmmo = Character->Weapons[Character->
-				CurrentWeaponIndex]->CurrentWeaponAmmo + Character->Weapons[
-				Character->CurrentWeaponIndex]->TotalWeaponAmmo;
-			Character->Weapons[Character->CurrentWeaponIndex]->TotalWeaponAmmo = 0;
-		}
-	}
+
+	// Ammo for this weapon can now be bought again, so re-enable its shop button
 	const AGrandad* Grandad = AGrandad::GetInstance();
-	if (Grandad->ShopWidgetInstance)
+	const FString AmmoItemName = GetAmmoShopItemName(Weapon->WeaponType);
+	if (Grandad && Grandad->ShopWidgetInstance && !AmmoItemName.IsEmpty())
 	{
 		for (UShopItem* ShopItem : Grandad->ShopWidgetInstance->ShopItems)
 		{
-			if (ShopItem && ShopItem->Item && ShopItem->ItemButton)
+			if (ShopItem && ShopItem->Item && ShopItem->ItemButton && ShopItem->Item->Name.ToString() == AmmoItemName)
 			{
-				if (Character->Weapons[Character->CurrentWeaponIndex]->WeaponType == EWeaponType::E_Pistol)
-				{
-					if (ShopItem->Item->Name.ToString() == TEXT("Pistol Ammo"))
-					{
-						ShopItem->bIsOwned = false;
-						ShopItem->ItemButton->SetBackgroundColor(FLinearColor::Gray);
-					}
-				}
-				else if (Character->Weapons[Character->CurrentWeaponIndex]->WeaponType == EWeaponType::E_AssaultRifle)
-				{
-					if (ShopItem->Item->Name.ToString() == TEXT("Assault Rifle Ammo"))
-					{
-						ShopItem->bIsOwned = false;
-						ShopItem->ItemButton->SetBackgroundColor(FLinearColor::Gray);
-					}
-				}
-				else if (Character->Weapons[Character->CurrentWeaponIndex]->WeaponType == EWeaponType::E_Shotgun)
-				{
-					if (ShopItem->Item->Name.ToString() == TEXT("Shotgun Ammo"))
-					{
-						ShopItem->bIsOwned = false;
-						ShopItem->ItemButton->SetBackgroundColor(FLinearColor::Gray);
-					}
-				}
+				ShopItem->bIsOwned = false;
+				ShopItem->ItemButton->SetBackgroundColor(FLinearColor::Gray);
 			}
 		}
 	}
 
-	Character->AmmoArray[Character->CurrentWeaponIndex] = Character->Weapons[Character->CurrentWeaponIndex]->
-		TotalWeaponAmmo;
+	Character->AmmoArray[Character->CurrentWeaponIndex] = Weapon->TotalWeaponAmmo;
 	Character->CurrentStateInstance->TryExitState(Character);
 }

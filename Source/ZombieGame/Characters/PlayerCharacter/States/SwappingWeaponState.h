@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -23,7 +21,7 @@ protected:
 	virtual void TryExitState(AZombieGameCharacter* Character) override;
 	
 	// weapon swap delay timer
-	const float WeaponSwapDelay = 0.7;
+	const float WeaponSwapDelay = 0.7f;
 	FTimerHandle WeaponSwapTimerHandle; // Not used with delegate
 
 	void WeaponSwapAfterDelay(AZombieGameCharacter* Character);

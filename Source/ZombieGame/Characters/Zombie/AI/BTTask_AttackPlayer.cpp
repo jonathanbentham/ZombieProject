@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 #include "ZombieGame/Characters/Zombie/AI/BTTask_AttackPlayer.h"
 #include "AIController.h"
 #include "ZombieGame/Characters/Zombie/AI/ZombieAIController.h"

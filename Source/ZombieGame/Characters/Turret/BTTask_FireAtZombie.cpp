@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "ZombieGame/Characters/Turret/BTTask_FireAtZombie.h"
 #include "ZombieGame/Characters/Zombie/Zombie.h"
 #include "BehaviorTree/BlackboardComponent.h"

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Zombie.h"
 #include "Kismet/GameplayStatics.h"
 #include "ZombieGame/GameMode/ZombieGameMode.h"
